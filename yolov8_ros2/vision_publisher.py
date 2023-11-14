@@ -21,7 +21,7 @@ class VisionPublisher(Node):
         super().__init__('vision_publisher')
         
         # Init callback groups
-        self.group_1 = MutuallyExclusiveCallbackGroup() # Image_raw subscriber
+        #self.group_1 = MutuallyExclusiveCallbackGroup() # Image_raw subscriber
         self.group_2 = MutuallyExclusiveCallbackGroup() # Timer
         
         # Create timer
@@ -31,6 +31,9 @@ class VisionPublisher(Node):
         
     def timer_callback(self):
         self.get_logger().info("Timer callback")
+        
+    def shutdown_callback(self):
+        self.get_logger().info("Shutting down...")
         
 
 
@@ -49,11 +52,15 @@ def main(args=None):
     try:
         # Run executor
         executor.spin()
+        
+    except KeyboardInterrupt:
+        pass
+    
     finally:
         # Shutdown executor
+        vision_node.shutdown_callback()
         executor.shutdown()
-        vision_node.destroy_node()
-    rclpy.shutdown()
+        #rclpy.shutdown()
 
 
 
