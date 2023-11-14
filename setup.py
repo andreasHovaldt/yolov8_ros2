@@ -12,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('lib/' + package_name, [package_name+'/camera_class.py']),
         (os.path.join('share', package_name), glob('launch/*.launch.py'))
     ],
     install_requires=['setuptools'],
@@ -25,6 +26,7 @@ setup(
         'console_scripts': [
             'camera_class = yolov8_ros2.camera_class:main',
             'vision_publisher = yolov8_ros2.vision_publisher:main',
+            'camera_ros_integration = yolov8_ros2.camera_ros_integration:main',
         ],
     },
 )

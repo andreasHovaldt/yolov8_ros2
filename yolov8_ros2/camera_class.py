@@ -204,7 +204,7 @@ class RealsenseVision(): # Currently works for the D400 product line, other Inte
                 bg_removed = np.where((depth_image_3d > self.clipping_distance) | (depth_image_3d != depth_image_3d), grey_color, color_image)
                 
                 # Predict the objects in the background removed image using the object recognition model
-                results = self.model(source=bg_removed, show=True, stream=False, conf=0.6)
+                results = self.model(source=bg_removed, show=True, stream=False, conf=0.6, verbose=self.debug_mode)
                 
                 # Go through each model detection
                 for detection in results:
