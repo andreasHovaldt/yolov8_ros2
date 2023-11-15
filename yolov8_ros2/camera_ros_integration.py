@@ -90,7 +90,7 @@ class CameraSubscriber(Node):
             # Convert ROS Image msg to cv2 mat then to np array
             self.cv_color_image = self.cv_bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             self.np_color_image = np.array(self.cv_color_image, dtype=np.uint8)
-            self.get_logger().info(f'Color encoding: {msg.encoding}') #-> rgb8 ( = bgr8?)
+            self.get_logger().debug(f'Color encoding: {msg.encoding}') #-> rgb8 ( = bgr8?)
             
         except Exception as e:
             self.get_logger().error(f'Error processing image: {e}')

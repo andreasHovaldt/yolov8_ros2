@@ -110,6 +110,8 @@ class RealsenseVision(): # Currently works for the D400 product line, other Inte
         
         # Initialize camera
         self.__initialize_camera_stream()
+        self.depth_scale = 0.001
+        self.clipping_distance = depth_range/self.depth_scale
         
         
         
@@ -140,10 +142,6 @@ class RealsenseVision(): # Currently works for the D400 product line, other Inte
         #TODO: ROS INTEGRATION: https://dev.intelrealsense.com/docs/ros2-align-depth
         self.align = rs.align(rs.stream.color) # align object used for aligning depth images to color images
         
-
-    def __get_clipping_distance(self, depth_range_in_meters):
-        depth_scale = self.profile.get_device().first_depth_sensor().get_depth_scale()
-        return depth_range_in_meters / depth_scale
 
     #--------------------------#
     # CLASS CALLABLE FUNCTIONS #
@@ -180,7 +178,7 @@ class RealsenseVision(): # Currently works for the D400 product line, other Inte
         self.__set_camera_intrinsics()
         
         # Get clipping distance, used for background removal
-        self.clipping_distance = self.__get_clipping_distance(self.depth_range)
+        #self.clipping_distance = self.__get_clipping_distance(self.depth_range)
         
         try:
             while True:
@@ -315,7 +313,7 @@ class RealsenseVision(): # Currently works for the D400 product line, other Inte
                 key = cv2.waitKey(1)
                 if key & 0xFF == ord('q') or key == 27:
                     cv2.destroyAllWindows()
-                    break    
+                    break
                     
                       
         finally:
