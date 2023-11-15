@@ -27,6 +27,7 @@ setup(
             'camera_class = yolov8_ros2.camera_class:main',
             'vision_publisher = yolov8_ros2.vision_publisher:main',
             'camera_ros_integration = yolov8_ros2.camera_ros_integration:main',
+            'yolov8_node = yolov8_ros2.yolov8_node:main',
         ],
     },
 )
