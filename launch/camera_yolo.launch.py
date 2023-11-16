@@ -3,14 +3,12 @@ import os
 import torch
 torch_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-from ament_index_python import get_package_share_directory
 
+from ament_index_python import get_package_share_directory
 
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
 
@@ -19,13 +17,6 @@ from launch_ros.actions import Node
 def generate_launch_description():
     this_package_name='yolov8_ros2'
     realsense_package_name = 'realsense2_camera'
-    
-    # Declare launch file parameters
-    # DeclareLaunchArgument(
-    #     'device',
-    #     default_value='cuda:0',#torch_device,
-    #     description='The device which the Yolo model should run on, default is "cuda:0", if available, otherwise it is set to "cpu"',
-    # )
     
 
     # Launch Realsense camera launch file with aligned depth images publisher
@@ -47,8 +38,6 @@ def generate_launch_description():
         ],
     )
     
-
-
 
     # Launch them all!
     return LaunchDescription([
