@@ -21,7 +21,7 @@ from ultralytics import YOLO
 # Others
 import numpy as np
 import open3d as o3d
-import time, json
+import time, json, torch
 
 
 class Yolov8Node(Node):
@@ -43,8 +43,8 @@ class Yolov8Node(Node):
         self.declare_parameter("threshold", 0.6)
         self.threshold = self.get_parameter("threshold").get_parameter_value().double_value
         
-        self.declare_parameter("enable_pred", True)
-        self.enable_pred = self.get_parameter("enable_pred").get_parameter_value().bool_value
+        self.declare_parameter("enable_yolo", True)
+        self.enable_yolo = self.get_parameter("enable_yolo").get_parameter_value().bool_value
         
         
         ## other inits
@@ -144,7 +144,7 @@ class Yolov8Node(Node):
     
     
     def object_segmentation(self):
-        if self.enable_pred and self.color_image_msg is not None and self.depth_image_msg is not None:
+        if self.enable_yolo and self.color_image_msg is not None and self.depth_image_msg is not None:
             self.get_logger().debug("Succesfully acquired color and depth image msgs")
             
             # Remove background
