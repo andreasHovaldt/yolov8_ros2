@@ -3,8 +3,6 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.qos import ReliabilityPolicy, QoSProfile
-from tf2_ros.transform_listener import TransformListener
-from tf2_ros.buffer import Buffer
 
 
 # Executor and callback imports
@@ -49,13 +47,11 @@ class Yolov8Node(Node):
         self.declare_parameter("enable_yolo", True)
         self.enable_yolo = self.get_parameter("enable_yolo").get_parameter_value().bool_value
         
-        self.declare_parameter("tf_target_frame", "world")
-        self.tf_target_frame = self.get_parameter("tf_target_frame").get_parameter_value().string_value
         
-        self.declare_parameter("camera_frame", "world")
-        self.camera_frame = self.get_parameter("camera_frame").get_parameter_value().string_value
-        
-        
+        self.tf_world_to_camera = np.array([[-0.000, -1.000,  0.000, -0.017], [0.559,  0.000,  0.829, -0.272], [-0.829,  0.000,  0.559,  0.725], [0.000,  0.000,  0.000,  1.000]])
+        self.tf_camera_to_optical = np.array([[-0.003,  0.001,  1.000,  0.000], [-1.000, -0.002, -0.003,  0.015], [0.002, -1.000,  0.001, -0.000], [0.000,  0.000,  0.000,  1.000]])
+        self.tf_world_to_optical = np.matmul(self.tf_world_to_camera, self.tf_camera_to_optical)
+
         
         ## other inits
         self.group_1 = MutuallyExclusiveCallbackGroup() # camera subscribers
@@ -74,11 +70,6 @@ class Yolov8Node(Node):
         # Set clipping distance for background removal
         depth_scale = 0.001
         self.clipping_distance = self.depth_range/depth_scale
-
-
-        # TF2 transforms
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
         
         
         # Publishers
@@ -233,10 +224,10 @@ class Yolov8Node(Node):
 
                     # Get median xyz value
                     median_center = np.median(np_pointcloud, axis=0)
-                    
-                    # Transform camera xyz to robot base xyz
-                    transform_matrix = self.tf_buffer.lookup_transform(target_frame=self.tf_target_frame, source_frame=None, time=rclpy.time.Time())
-                    median_center_transformed = median_center * transform_matrix
+                    median_center = np.append(median_center, 1)
+                    median_center_transformed = np.matmul(self.tf_world_to_optical, median_center)
+                    #self.get_logger().info(f"Transform: {self.tf_optical_to_world[0:3, 3]}")
+                    #median_center_transformed = np.add(median_center, np.multiply(self.tf_optical_to_world[0:3, 3], -1))
 
                     # Save i'th object pointcloud median center to list
                     objects_median_center.append(median_center)
@@ -247,13 +238,16 @@ class Yolov8Node(Node):
                 item_dict = {}
                 detection_class = detection.boxes.cls.cpu().numpy()
                 detection_conf = detection.boxes.conf.cpu().numpy()
+                
                 for item, n, median, median_tf, conf in zip(detection_class, range(n_objects), objects_median_center, objects_median_center_transform, detection_conf):
                     item_dict[f'item_{n}'] = {'class': detection.names[item],
-                                             'confidence': conf.tolist(),
-                                             'median_center_': median.tolist()}
+                                             #'confidence': conf.tolist(),
+                                             'median_center': median.tolist(),
+                                             'median_center_tf': median_tf.tolist()}
+                
                 self.item_dict = item_dict
                 self.item_dict_str = json.dumps(self.item_dict)
-                
+                self.get_logger().info(f"{item_dict}")
                 
                 item_dict_msg = String()
                 item_dict_msg.data = self.item_dict_str
