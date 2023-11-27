@@ -3,6 +3,9 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.qos import ReliabilityPolicy, QoSProfile
+from tf2_ros.transform_listener import TransformListener
+from tf2_ros.buffer import Buffer
+
 
 # Executor and callback imports
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
@@ -46,6 +49,13 @@ class Yolov8Node(Node):
         self.declare_parameter("enable_yolo", True)
         self.enable_yolo = self.get_parameter("enable_yolo").get_parameter_value().bool_value
         
+        self.declare_parameter("tf_target_frame", "world")
+        self.tf_target_frame = self.get_parameter("tf_target_frame").get_parameter_value().string_value
+        
+        self.declare_parameter("camera_frame", "world")
+        self.camera_frame = self.get_parameter("camera_frame").get_parameter_value().string_value
+        
+        
         
         ## other inits
         self.group_1 = MutuallyExclusiveCallbackGroup() # camera subscribers
@@ -65,6 +75,11 @@ class Yolov8Node(Node):
         depth_scale = 0.001
         self.clipping_distance = self.depth_range/depth_scale
 
+
+        # TF2 transforms
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        
         
         # Publishers
         self._item_dict_pub = self.create_publisher(String, "item_dict", 10)
@@ -179,6 +194,8 @@ class Yolov8Node(Node):
                 # Declare variables used later
                 objects_global_point_clouds = []
                 objects_median_center = []
+                objects_median_center_transform = []
+
 
 
                 for i in range(n_objects):
@@ -216,16 +233,21 @@ class Yolov8Node(Node):
 
                     # Get median xyz value
                     median_center = np.median(np_pointcloud, axis=0)
+                    
+                    # Transform camera xyz to robot base xyz
+                    transform_matrix = self.tf_buffer.lookup_transform(target_frame=self.tf_target_frame, source_frame=None, time=rclpy.time.Time())
+                    median_center_transformed = median_center * transform_matrix
 
                     # Save i'th object pointcloud median center to list
                     objects_median_center.append(median_center)
+                    objects_median_center_transform.append(median_center_transformed)
 
 
                 # Item dict creation
                 item_dict = {}
                 detection_class = detection.boxes.cls.cpu().numpy()
                 detection_conf = detection.boxes.conf.cpu().numpy()
-                for item, n, median, conf in zip(detection_class, range(n_objects), objects_median_center, detection_conf):
+                for item, n, median, median_tf, conf in zip(detection_class, range(n_objects), objects_median_center, objects_median_center_transform, detection_conf):
                     item_dict[f'item_{n}'] = {'class': detection.names[item],
                                              'confidence': conf.tolist(),
                                              'median_center_': median.tolist()}
