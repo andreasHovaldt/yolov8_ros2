@@ -4,6 +4,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.qos import ReliabilityPolicy, QoSProfile
 
+
 # Executor and callback imports
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
@@ -47,6 +48,11 @@ class Yolov8Node(Node):
         self.enable_yolo = self.get_parameter("enable_yolo").get_parameter_value().bool_value
         
         
+        self.tf_world_to_camera = np.array([[-0.000, -1.000,  0.000, -0.017], [0.559,  0.000,  0.829, -0.272], [-0.829,  0.000,  0.559,  0.725], [0.000,  0.000,  0.000,  1.000]])
+        self.tf_camera_to_optical = np.array([[-0.003,  0.001,  1.000,  0.000], [-1.000, -0.002, -0.003,  0.015], [0.002, -1.000,  0.001, -0.000], [0.000,  0.000,  0.000,  1.000]])
+        self.tf_world_to_optical = np.matmul(self.tf_world_to_camera, self.tf_camera_to_optical)
+
+        
         ## other inits
         self.group_1 = MutuallyExclusiveCallbackGroup() # camera subscribers
         self.group_2 = MutuallyExclusiveCallbackGroup() # vision timer
@@ -60,14 +66,16 @@ class Yolov8Node(Node):
         self.color_image_msg = None
         self.depth_image_msg = None
         self.camera_intrinsics = None
+        self.pred_image_msg = Image()
         
         # Set clipping distance for background removal
         depth_scale = 0.001
         self.clipping_distance = self.depth_range/depth_scale
-
+        
         
         # Publishers
         self._item_dict_pub = self.create_publisher(String, "item_dict", 10)
+        self._pred_pub = self.create_publisher(Image, "/camera/color/prediction", 10)
         
         # Subscribers
         self._color_image_sub = self.create_subscription(Image, "/camera/color/image_raw", self.color_image_callback, qos_profile_sensor_data, callback_group=self.group_1)
@@ -165,6 +173,13 @@ class Yolov8Node(Node):
             
             # Go through detections in prediction results
             for detection in results:
+                
+                # Extract image with yolo predictions
+                pred_img = detection.plot()
+                self.pred_image_msg = self.cv_bridge.cv2_to_imgmsg(pred_img, encoding='passthrough')
+                self._pred_pub.publish(self.pred_image_msg)
+                
+                
                 object_boxes = detection.boxes.xyxy.cpu().numpy()
                 n_objects = object_boxes.shape[0]
 
@@ -179,6 +194,8 @@ class Yolov8Node(Node):
                 # Declare variables used later
                 objects_global_point_clouds = []
                 objects_median_center = []
+                objects_median_center_transform = []
+
 
 
                 for i in range(n_objects):
@@ -216,22 +233,28 @@ class Yolov8Node(Node):
 
                     # Get median xyz value
                     median_center = np.median(np_pointcloud, axis=0)
+                    median_center = np.append(median_center, 1)
+                    median_center_transformed = np.matmul(self.tf_world_to_optical, median_center)
 
                     # Save i'th object pointcloud median center to list
                     objects_median_center.append(median_center)
+                    objects_median_center_transform.append(median_center_transformed)
 
 
                 # Item dict creation
                 item_dict = {}
                 detection_class = detection.boxes.cls.cpu().numpy()
                 detection_conf = detection.boxes.conf.cpu().numpy()
-                for item, n, median, conf in zip(detection_class, range(n_objects), objects_median_center, detection_conf):
+                
+                for item, n, median_tf in zip(detection_class, range(n_objects), objects_median_center_transform):
                     item_dict[f'item_{n}'] = {'class': detection.names[item],
-                                             'confidence': conf.tolist(),
-                                             'median_center_': median.tolist()}
+                                             #'confidence': conf.tolist(),
+                                             #'median_center': median.tolist(),
+                                             'position': median_tf.tolist()}
+                
                 self.item_dict = item_dict
                 self.item_dict_str = json.dumps(self.item_dict)
-                
+                self.get_logger().info(f"{item_dict}")
                 
                 item_dict_msg = String()
                 item_dict_msg.data = self.item_dict_str
