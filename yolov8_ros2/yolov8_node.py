@@ -66,6 +66,7 @@ class Yolov8Node(Node):
         self.color_image_msg = None
         self.depth_image_msg = None
         self.camera_intrinsics = None
+        self.pred_image_msg = Image()
         
         # Set clipping distance for background removal
         depth_scale = 0.001
@@ -74,6 +75,7 @@ class Yolov8Node(Node):
         
         # Publishers
         self._item_dict_pub = self.create_publisher(String, "item_dict", 10)
+        self._pred_pub = self.create_publisher(Image, "/camera/color/prediction", 10)
         
         # Subscribers
         self._color_image_sub = self.create_subscription(Image, "/camera/color/image_raw", self.color_image_callback, qos_profile_sensor_data, callback_group=self.group_1)
@@ -171,6 +173,13 @@ class Yolov8Node(Node):
             
             # Go through detections in prediction results
             for detection in results:
+                
+                # Extract image with yolo predictions
+                pred_img = detection.plot()
+                self.pred_image_msg = self.cv_bridge.cv2_to_imgmsg(pred_img, encoding='passthrough')
+                self._pred_pub.publish(self.pred_image_msg)
+                
+                
                 object_boxes = detection.boxes.xyxy.cpu().numpy()
                 n_objects = object_boxes.shape[0]
 
@@ -226,8 +235,6 @@ class Yolov8Node(Node):
                     median_center = np.median(np_pointcloud, axis=0)
                     median_center = np.append(median_center, 1)
                     median_center_transformed = np.matmul(self.tf_world_to_optical, median_center)
-                    #self.get_logger().info(f"Transform: {self.tf_optical_to_world[0:3, 3]}")
-                    #median_center_transformed = np.add(median_center, np.multiply(self.tf_optical_to_world[0:3, 3], -1))
 
                     # Save i'th object pointcloud median center to list
                     objects_median_center.append(median_center)
@@ -239,11 +246,11 @@ class Yolov8Node(Node):
                 detection_class = detection.boxes.cls.cpu().numpy()
                 detection_conf = detection.boxes.conf.cpu().numpy()
                 
-                for item, n, median, median_tf, conf in zip(detection_class, range(n_objects), objects_median_center, objects_median_center_transform, detection_conf):
+                for item, n, median_tf in zip(detection_class, range(n_objects), objects_median_center_transform):
                     item_dict[f'item_{n}'] = {'class': detection.names[item],
                                              #'confidence': conf.tolist(),
-                                             'median_center': median.tolist(),
-                                             'median_center_tf': median_tf.tolist()}
+                                             #'median_center': median.tolist(),
+                                             'position': median_tf.tolist()}
                 
                 self.item_dict = item_dict
                 self.item_dict_str = json.dumps(self.item_dict)
