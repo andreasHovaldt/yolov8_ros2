@@ -74,8 +74,8 @@ class Yolov8Node(Node):
         
         
         # Publishers
-        self._item_dict_pub = self.create_publisher(String, "item_dict", 10)
-        self._pred_pub = self.create_publisher(Image, "/camera/color/prediction", 10)
+        self._item_dict_pub = self.create_publisher(String, "/yolo/prediction/item_dict", 10)
+        self._pred_pub = self.create_publisher(Image, "/yolo/prediction/image", 10)
         
         # Subscribers
         self._color_image_sub = self.create_subscription(Image, "/camera/color/image_raw", self.color_image_callback, qos_profile_sensor_data, callback_group=self.group_1)
