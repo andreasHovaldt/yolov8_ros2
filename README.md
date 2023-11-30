@@ -27,6 +27,6 @@ ros2 launch yolov8_ros2 camera_yolo.launch.py
 ```
 This launches the camera node, and the yolov8 node. 
 The image prediction results of the yolov8 segmentation are published to the topic: ```/yolo/prediction/image```.
-These results are also published in a json format to the topic: ```/yolo/prediction/item_dict```.
+These results are also published in a json formatted string to the topic: ```/yolo/prediction/item_dict```.
 
 
