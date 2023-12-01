@@ -254,7 +254,8 @@ class Yolov8Node(Node):
                 
                 self.item_dict = item_dict
                 self.item_dict_str = json.dumps(self.item_dict)
-                self.get_logger().info(f"Yolo detected {detection.names}")
+                #self.get_logger().info(f"Yolo detected items: {detection.names[detection_class]}")
+                self.get_logger().info(f"Yolo detected items: {[detection.names[item] for item in detection_class]}")
                 
                 item_dict_msg = String()
                 item_dict_msg.data = self.item_dict_str
