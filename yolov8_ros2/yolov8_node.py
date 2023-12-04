@@ -74,8 +74,8 @@ class Yolov8Node(Node):
         
         
         # Publishers
-        self._item_dict_pub = self.create_publisher(String, "item_dict", 10)
-        self._pred_pub = self.create_publisher(Image, "/camera/color/prediction", 10)
+        self._item_dict_pub = self.create_publisher(String, "/yolo/prediction/item_dict", 10)
+        self._pred_pub = self.create_publisher(Image, "/yolo/prediction/image", 10)
         
         # Subscribers
         self._color_image_sub = self.create_subscription(Image, "/camera/color/image_raw", self.color_image_callback, qos_profile_sensor_data, callback_group=self.group_1)
@@ -254,7 +254,8 @@ class Yolov8Node(Node):
                 
                 self.item_dict = item_dict
                 self.item_dict_str = json.dumps(self.item_dict)
-                self.get_logger().info(f"{item_dict}")
+                #self.get_logger().info(f"Yolo detected items: {detection.names[detection_class]}")
+                self.get_logger().info(f"Yolo detected items: {[detection.names[item] for item in detection_class]}")
                 
                 item_dict_msg = String()
                 item_dict_msg.data = self.item_dict_str
