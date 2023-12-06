@@ -38,7 +38,7 @@ class Yolov8Node(Node):
         self.declare_parameter("device", "cuda:0")
         self.device = self.get_parameter("device").get_parameter_value().string_value
         
-        self.declare_parameter("depth_range", 3.0)
+        self.declare_parameter("depth_range", 1.2)
         self.depth_range = self.get_parameter("depth_range").get_parameter_value().double_value
         
         self.declare_parameter("threshold", 0.6)
