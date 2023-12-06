@@ -38,8 +38,8 @@ class Yolov8Node(Node):
         self.declare_parameter("device", "cuda:0")
         self.device = self.get_parameter("device").get_parameter_value().string_value
         
-        self.declare_parameter("depth_range", 1.2)
-        self.depth_range = self.get_parameter("depth_range").get_parameter_value().double_value
+        self.declare_parameter("clipping_distance", 1.2)
+        self.clipping_distance = self.get_parameter("clipping_distance").get_parameter_value().double_value
         
         self.declare_parameter("threshold", 0.6)
         self.threshold = self.get_parameter("threshold").get_parameter_value().double_value
@@ -70,7 +70,7 @@ class Yolov8Node(Node):
         
         # Set clipping distance for background removal
         depth_scale = 0.001
-        self.clipping_distance = self.depth_range/depth_scale
+        self.clipping_distance = self.clipping_distance/depth_scale
         
         
         # Publishers
