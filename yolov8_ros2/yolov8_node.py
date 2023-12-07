@@ -38,8 +38,8 @@ class Yolov8Node(Node):
         self.declare_parameter("device", "cuda:0")
         self.device = self.get_parameter("device").get_parameter_value().string_value
         
-        self.declare_parameter("clipping_distance", 1.2)
-        self.clipping_distance = self.get_parameter("clipping_distance").get_parameter_value().double_value
+        self.declare_parameter("depth_threshold", 1.2)
+        self.depth_threshold = self.get_parameter("depth_threshold").get_parameter_value().double_value
         
         self.declare_parameter("threshold", 0.6)
         self.threshold = self.get_parameter("threshold").get_parameter_value().double_value
@@ -70,7 +70,7 @@ class Yolov8Node(Node):
         
         # Set clipping distance for background removal
         depth_scale = 0.001
-        self.clipping_distance = self.clipping_distance/depth_scale
+        self.depth_threshold = self.depth_threshold/depth_scale
         
         
         # Publishers
@@ -123,7 +123,7 @@ class Yolov8Node(Node):
             # bg removal
             grey_color = 153
             depth_image_3d = np.dstack((np_depth_image, np_depth_image, np_depth_image)) # depth image is 1 channel, color is 3 channels
-            bg_removed = np.where((depth_image_3d > self.clipping_distance) | (depth_image_3d != depth_image_3d), grey_color, np_color_image)
+            bg_removed = np.where((depth_image_3d > self.depth_threshold) | (depth_image_3d != depth_image_3d), grey_color, np_color_image)
             
             return bg_removed, np_color_image, np_depth_image
         self.get_logger().error("Background removal error, color or depth msg was None")
@@ -179,7 +179,7 @@ class Yolov8Node(Node):
                 self.pred_image_msg = self.cv_bridge.cv2_to_imgmsg(pred_img, encoding='passthrough')
                 self._pred_pub.publish(self.pred_image_msg)
                 
-                
+                # Get number of objects in the scene
                 object_boxes = detection.boxes.xyxy.cpu().numpy()
                 n_objects = object_boxes.shape[0]
 
